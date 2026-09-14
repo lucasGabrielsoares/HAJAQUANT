@@ -1,0 +1,35 @@
+import{loadRobots}from'./storage.js';
+import{calculateMetrics}from'./metrics.js';
+import{overfitDiagnostics}from'./overfitting.js';
+import{splitWalkForward}from'./robustness.js';
+
+const esc=s=>String(s??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>Number.isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+const ratio=n=>Number.isFinite(n)?n.toFixed(2):'—';
+const pct=n=>Number.isFinite(n)?n.toFixed(2)+'%':'—';
+
+export function buildProfessionalReport(robot){
+ const m=calculateMetrics(robot||{}), o=overfitDiagnostics(m);
+ let wf=null;try{if((m.tradeRows||[]).length>=30)wf=splitWalkForward(m.tradeRows,.7)}catch{}
+ const title=esc(m.filename||'Robô sem nome');
+ const verdict=m.score>=80?'Excelente base':m.score>=65?'Boa base':m.score>=45?'Atenção':'Baixa qualidade';
+ const warnings=[...o.warnings];
+ if(wf&&wf.score<50)warnings.push('O desempenho fora da amostra da divisão Walk-Forward ficou fraco.');
+ if(!warnings.length)warnings.push('Nenhum alerta automático relevante foi detectado. Isso não substitui validação fora da amostra.');
+ return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HAJAQUANT — Relatório — ${title}</title><style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#172033;font:14px Arial,sans-serif}main{max-width:1100px;margin:0 auto;background:#fff;min-height:100vh;padding:42px 46px}.head{display:flex;justify-content:space-between;gap:24px;border-bottom:2px solid #172033;padding-bottom:24px}.brand{font-size:24px;font-weight:800;letter-spacing:.04em}.muted{color:#687386}.date{font-size:12px;color:#687386;text-align:right}.score{min-width:130px;text-align:center;border:1px solid #dbe1e8;border-radius:12px;padding:14px}.score b{display:block;font-size:32px}.section{margin-top:30px}.section h2{font-size:17px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.card{border:1px solid #dfe4ea;border-radius:10px;padding:13px}.card span{display:block;color:#687386;font-size:11px;text-transform:uppercase;margin-bottom:6px}.card b{font-size:18px}.table{width:100%;border-collapse:collapse}.table td{padding:10px 8px;border-bottom:1px solid #e8ebef}.table td:last-child{text-align:right;font-weight:700}.warn{padding:11px 13px;border:1px solid #e1e5ea;border-radius:8px;margin:7px 0;background:#fafbfc}.conclusion{padding:18px;border:1px solid #dbe1e8;border-radius:10px;line-height:1.6}.actions{position:sticky;top:0;padding:12px 0;background:#fff;text-align:right}.btn{border:0;border-radius:8px;padding:10px 16px;background:#172033;color:#fff;font-weight:700;cursor:pointer}@media(max-width:800px){main{padding:24px}.grid{grid-template-columns:repeat(2,1fr)}.head{flex-direction:column}.date{text-align:left}}@media print{.actions{display:none}body{background:#fff}main{padding:20px;max-width:none}}
+</style></head><body><main><div class="actions"><button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button></div><header class="head"><div><div class="brand">HAJAQUANT</div><h1>Relatório Quantitativo</h1><div class="muted">${title}</div><div class="muted">${esc(m.source||'')} • ${esc(m.period||'Período não identificado')}</div></div><div class="score"><span>QUALITY SCORE</span><b>${Number.isFinite(m.score)?m.score:'—'}</b><div>${verdict}</div></div></header>
+<section class="section"><h2>Resumo executivo</h2><div class="grid"><div class="card"><span>Net Profit</span><b>${money(m.net)}</b></div><div class="card"><span>Retorno</span><b>${pct(m.returnPct)}</b></div><div class="card"><span>Max Drawdown</span><b>${money(m.maxDD)}</b></div><div class="card"><span>Drawdown %</span><b>${pct(m.maxDDPct)}</b></div><div class="card"><span>Profit Factor</span><b>${ratio(m.pf)}</b></div><div class="card"><span>Sharpe</span><b>${ratio(m.sharpe)}</b></div><div class="card"><span>Sortino</span><b>${ratio(m.sortino)}</b></div><div class="card"><span>Trades</span><b>${m.trades??'—'}</b></div></div></section>
+<section class="section"><h2>Performance e risco</h2><table class="table"><tr><td>Win Rate</td><td>${pct(m.winRate)}</td></tr><tr><td>Expectancy por trade</td><td>${money(m.expectancy)}</td></tr><tr><td>Average Win</td><td>${money(m.avgWin)}</td></tr><tr><td>Average Loss</td><td>${money(m.avgLoss)}</td></tr><tr><td>Recovery Factor</td><td>${ratio(m.recovery)}</td></tr><tr><td>Calmar</td><td>${ratio(m.calmar)}</td></tr><tr><td>SQN</td><td>${ratio(m.sqn)}</td></tr><tr><td>Volatilidade</td><td>${pct(m.volatility)}</td></tr><tr><td>Maior sequência de ganhos / perdas</td><td>${m.maxWinStreak||0} / ${m.maxLossStreak||0}</td></tr></table></section>
+<section class="section"><h2>Robustez e overfitting</h2><div class="grid"><div class="card"><span>Overfitting alert</span><b>${o.score}/100</b></div><div class="card"><span>Diagnóstico</span><b>${esc(o.label)}</b></div><div class="card"><span>WFA score</span><b>${wf?wf.score+'/100':'—'}</b></div><div class="card"><span>Eficiência OOS</span><b>${wf?pct(wf.efficiency):'—'}</b></div></div><div style="margin-top:14px">${warnings.map(x=>`<div class="warn">⚠ ${esc(x)}</div>`).join('')}</div><p class="muted">A divisão Walk-Forward usada pelo relatório é um diagnóstico sequencial: ela não reotimiza parâmetros. Para validação de produção, combine OOS, custos, diferentes períodos e testes de estabilidade.</p></section>
+<section class="section"><h2>Conclusão automática</h2><div class="conclusion">${m.score>=80?'O conjunto de métricas apresenta uma base quantitativa forte, mas deve continuar sendo validado em dados fora da amostra e sob custos realistas.':m.score>=65?'O backtest apresenta sinais positivos, porém ainda há fatores de risco ou robustez que precisam de validação adicional.':m.score>=45?'O resultado é intermediário. Antes de considerar a estratégia robusta, aumente a validação de estabilidade, amostra e desempenho fora da amostra.':'Os indicadores atuais não sustentam uma conclusão de robustez. O próximo passo deve ser investigar dados, custos, amostra e estabilidade.'}</div></section>
+<footer class="section muted">Gerado pelo HAJAQUANT • Relatório quantitativo automatizado • ${new Date().toLocaleString('pt-BR')}</footer></main></body></html>`;
+}
+
+export function openProfessionalReport(robot){const html=buildProfessionalReport(robot);const w=window.open('','_blank');if(!w){alert('Permita pop-ups para abrir o relatório.');return}w.document.open();w.document.write(html);w.document.close()}
+
+export function installReportButton(){
+ const nav=[...document.querySelectorAll('.nav button')].find(b=>b.dataset.section==='reports');if(!nav||nav.dataset.reportReady)return;
+ nav.dataset.reportReady='1';nav.addEventListener('click',e=>{e.preventDefault();const robots=loadRobots();const robot=robots[0];if(!robot){alert('Importe e salve pelo menos um robô antes de gerar o relatório.');return}openProfessionalReport(robot)});
+}
+if(typeof window!=='undefined')window.addEventListener('DOMContentLoaded',installReportButton);
