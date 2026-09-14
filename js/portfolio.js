@@ -1,4 +1,5 @@
 import'./comparison-ui.js';
+import'./report.js';
 import{bestPortfolio,optimizePortfolio}from'./portfolio-optimizer.js';
 import{runPortfolioMonteCarlo}from'./portfolio-montecarlo.js';
 export function analyzePortfolio(robots){const valid=(robots||[]).filter(r=>Number.isFinite(r.net));if(!valid.length)return{robots:[],net:0,dd:0,weightedScore:0,totalTrades:0,profitFactor:null};const net=valid.reduce((s,r)=>s+r.net,0),dd=valid.reduce((s,r)=>s+Math.abs(r.maxDD||0),0),weightedScore=valid.reduce((s,r)=>s+(Number.isFinite(r.score)?r.score:0),0)/valid.length,totalTrades=valid.reduce((s,r)=>s+(r.trades||0),0),gp=valid.reduce((s,r)=>s+(r.grossProfit||0),0),gl=valid.reduce((s,r)=>s+Math.abs(r.grossLoss||0),0);return{robots:valid,net,dd,weightedScore:Math.round(weightedScore),totalTrades,profitFactor:gl?gp/gl:null,optimizer:bestPortfolio(valid)}}
