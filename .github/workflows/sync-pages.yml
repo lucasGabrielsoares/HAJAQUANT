@@ -1,8 +1,7 @@
 name: Sync GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -11,24 +10,6 @@ jobs:
   sync-pages:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Copy site to Pages folder
-        run: |
-          mkdir -p docs
-          rm -rf docs/css docs/js
-          cp index.html docs/index.html
-          cp -r css docs/css
-          cp -r js docs/js
-          touch docs/.nojekyll
-      - name: Commit Pages files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/index.html docs/css docs/js docs/.nojekyll
-          if git diff --cached --quiet; then
-            echo "No changes to publish."
-          else
-            git commit -m "Sync modular site to GitHub Pages"
-            git push
-          fi
+      - uses: actions/checkout@v4
+      - name: Keep Pages build independent
+        run: echo "GitHub Pages files are maintained directly in docs/"
