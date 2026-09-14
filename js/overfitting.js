@@ -1,9 +1,3 @@
-export function overfitDiagnostics(m){
-  const warnings=[]; const t=m.trades||0;
-  if(t<100) warnings.push('Poucos trades: a amostra pode ser estatisticamente fraca.');
-  if((m.pf||0)>3) warnings.push('Profit Factor muito alto: investigue overfitting e condições específicas do backtest.');
-  if((m.sharpe||0)>3) warnings.push('Sharpe excepcionalmente alto: valide em período fora da amostra.');
-  if((m.maxDDPct||0)>-5 && (m.pf||0)>2) warnings.push('Retorno alto com drawdown muito baixo merece validação adicional.');
-  const score=100-Math.min(100,warnings.length*20);
-  return {warnings,score,label:score>=80?'Baixo alerta':score>=50?'Atenção':'Alto alerta'};
-}
+function mean(a){return a.length?a.reduce((x,y)=>x+y,0)/a.length:0}
+function segmentStats(trades){const p=trades.map(t=>Number(t.profit)).filter(Number.isFinite),n=p.length,w=p.filter(x=>x>0),l=p.filter(x=>x<0),gp=w.reduce((a,b)=>a+b,0),gl=Math.abs(l.reduce((a,b)=>a+b,0));return{n,net:p.reduce((a,b)=>a+b,0),pf:gl?gp/gl:null,win:n?w.length/n*100:null,avg:n?mean(p):null}}
+export function overfitDiagnostics(m){const warnings=[],t=m.tradeRows||[],n=m.trades||t.length;const pf=Number(m.pf),sh=Number(m.sharpe),dd=Math.abs(Number(m.maxDDPct||0));if(n<100)warnings.push('Poucos trades: a amostra pode ser estatisticamente fraca.');if(pf>3)warnings.push('Profit Factor muito alto: investigue overfitting e condições específicas.');if(sh>3)warnings.push('Sharpe excepcionalmente alto: valide fora da amostra.');if(pf>2&&dd<5)warnings.push('Retorno alto com drawdown muito baixo merece validação adicional.');if(t.length>=30){const k=Math.max(10,Math.floor(t.length/3));const a=segmentStats(t.slice(0,k)),b=segmentStats(t.slice(-k));if(a.net>0&&b.net<0)warnings.push('O terço final virou negativo: possível perda de estabilidade temporal.');if(a.pf&&b.pf&&b.pf<a.pf*.5)warnings.push('Profit Factor caiu mais de 50% entre início e fim da amostra.');const abs=t.map(x=>Math.abs(Number(x.profit))).filter(Number.isFinite).sort((x,y)=>y-x),net=Math.abs(segmentStats(t).net);const top=Math.min(5,abs.length),share=net?abs.slice(0,top).reduce((a,b)=>a+b,0)/net:0;if(share>1)warnings.push('Poucos trades extremos explicam parcela relevante do resultado; investigue concentração de P&L.');}const score=Math.max(0,100-Math.min(100,warnings.length*15));return{warnings,score,label:score>=80?'Baixo alerta':score>=50?'Atenção':'Alto alerta'}}
