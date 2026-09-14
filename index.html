@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HAJAQUANT — Quantitative Analyzer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,sans-serif;background:#0b1020;color:#e8edf7}button,input{font:inherit}.app{min-height:100vh;display:flex}.sidebar{width:240px;background:#0f172a;border-right:1px solid #202a3d;padding:24px 16px}.brand{font-size:22px;font-weight:800;margin:0 8px 28px}.brand span{font-weight:400;color:#8490a8}.nav{display:grid;gap:8px}.nav button{border:0;background:transparent;color:#9ca8bd;text-align:left;padding:12px;border-radius:9px;cursor:pointer}.nav button.active,.nav button:hover{background:#1b263b;color:#fff}.main{flex:1;padding:28px;max-width:1500px;margin:auto;width:100%}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}.top h1{margin:0;font-size:27px}.muted{color:#8793a8}.upload{border:1px dashed #53627e;border-radius:14px;padding:25px;text-align:center;background:#111a2d;margin-bottom:24px}.upload input{display:none}.upload label{display:inline-block;background:#2563eb;color:#fff;padding:11px 18px;border-radius:9px;cursor:pointer;font-weight:700}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px}.card{background:#111a2d;border:1px solid #202b40;border-radius:14px;padding:18px}.card .label{font-size:13px;color:#8c99ad;margin-bottom:10px}.value{font-size:25px;font-weight:800}.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:18px}.panel{background:#111a2d;border:1px solid #202b40;border-radius:14px;padding:20px;margin-bottom:18px}.panel h2{font-size:16px;margin:0 0 18px}.chart-wrap{height:330px}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:11px;border-bottom:1px solid #202b40;font-size:13px}.table th{color:#8996ac;font-weight:600}.status{margin-top:10px;font-size:13px;color:#8e9ab0}@media(max-width:1050px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.sidebar{display:none}}@media(max-width:600px){.main{padding:16px}.cards{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar"><div class="brand">HAJAQUANT <span>V1</span></div><div class="nav"><button class="active">Dashboard</button><button>Robôs</button><button>Relatórios</button><button>Comparação</button></div></aside>
+  <main class="main">
+    <div class="top"><div><h1>Dashboard Quantitativo</h1><div class="muted">Analise seus backtests do MetaTrader 5</div></div></div>
+    <section class="upload"><strong>Importar Strategy Tester</strong><div class="muted" style="margin:8px 0 16px">Envie um relatório HTML ou CSV exportado pelo MT5</div><label for="file">Selecionar arquivo</label><input id="file" type="file" accept=".html,.htm,.csv,text/html,text/csv"/><div id="status" class="status">Nenhum arquivo carregado.</div></section>
+    <section class="cards">
+      <div class="card"><div class="label">Lucro Líquido</div><div id="profit" class="value">—</div></div>
+      <div class="card"><div class="label">Drawdown Máximo</div><div id="dd" class="value">—</div></div>
+      <div class="card"><div class="label">Sharpe Ratio</div><div id="sharpe" class="value">—</div></div>
+      <div class="card"><div class="label">Profit Factor</div><div id="pf" class="value">—</div></div>
+      <div class="card"><div class="label">Trades</div><div id="trades" class="value">—</div></div>
+    </section>
+    <section class="grid">
+      <div>
+        <div class="panel"><h2>Curva de Equity</h2><div class="chart-wrap"><canvas id="equityChart"></canvas></div></div>
+        <div class="panel"><h2>Drawdown</h2><div class="chart-wrap"><canvas id="ddChart"></canvas></div></div>
+      </div>
+      <div>
+        <div class="panel"><h2>Resumo do Robô</h2><table class="table"><tbody><tr><th>Arquivo</th><td id="filename">—</td></tr><tr><th>Período</th><td id="period">—</td></tr><tr><th>Saldo inicial</th><td id="initial">—</td></tr><tr><th>Saldo final</th><td id="final">—</td></tr><tr><th>Win rate</th><td id="winrate">—</td></tr></tbody></table></div>
+        <div class="panel"><h2>Próximos módulos</h2><div class="muted" style="line-height:1.8">• análise avançada de risco<br>• Monte Carlo<br>• análise por período<br>• comparação de robôs<br>• relatórios PDF<br>• análise de portfólio</div></div>
+      </div>
+    </section>
+  </main>
+</div>
+<script>
+let equityChart,ddChart;
+const money=n=>Number.isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+function drawCharts(eq=[]){const labels=eq.map((_,i)=>i+1);if(equityChart)equityChart.destroy();if(ddChart)ddChart.destroy();equityChart=new Chart(document.getElementById('equityChart'),{type:'line',data:{labels,datasets:[{label:'Equity',data:eq,tension:.2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#202b40'}}}}});let peak=-Infinity,dds=eq.map(v=>{peak=Math.max(peak,v);return v-peak});ddChart=new Chart(document.getElementById('ddChart'),{type:'line',data:{labels,datasets:[{label:'Drawdown',data:dds,tension:.2,pointRadius:0,fill:true}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#202b40'}}}}})}
+function setStatus(t){document.getElementById('status').textContent=t}
+function parseCSV(text){const rows=text.trim().split(/\r?\n/).map(r=>r.split(/[,;\t]/).map(x=>x.trim().replace(/^"|"$/g,'')));const headers=rows[0].map(x=>x.toLowerCase());const find=terms=>headers.findIndex(h=>terms.some(t=>h.includes(t)));const eqI=find(['balance','equity','saldo']);const profitI=find(['profit','lucro']);const vals=rows.slice(1).map(r=>parseFloat((r[eqI>=0?eqI:profitI]||'').replace(/[^0-9,.-]/g,'').replace(',','.'))).filter(Number.isFinite);return {equity:vals,profit:profitI>=0?vals.reduce((a,b)=>a+b,0):null,trades:rows.length-1}}
+function parseHTML(text){const doc=new DOMParser().parseFromString(text,'text/html');const txt=doc.body.innerText||'';const grab=re=>{const m=txt.match(re);return m?parseFloat(m[1].replace(/\s/g,'').replace(/\./g,'').replace(',','.')):null};return {profit:grab(/(?:Total Net Profit|Lucro Líquido|Net Profit)\s*[:\t ]+(-?[\d.,]+)/i),dd:grab(/(?:Maximal Drawdown|Maximum Drawdown|Drawdown Máximo)\s*[:\t ]+(-?[\d.,]+)/i),pf:grab(/(?:Profit Factor)\s*[:\t ]+([\d.,]+)/i),sharpe:grab(/(?:Sharpe Ratio|Sharpe)\s*[:\t ]+(-?[\d.,]+)/i),trades:grab(/(?:Total Trades|Trades|Total de negócios)\s*[:\t ]+(\d+)/i),equity:[]}}
+document.getElementById('file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;document.getElementById('filename').textContent=f.name;setStatus('Processando...');const text=await f.text();let d=f.name.toLowerCase().endsWith('.csv')?parseCSV(text):parseHTML(text);if(d.profit!=null)document.getElementById('profit').textContent=money(d.profit);if(d.dd!=null)document.getElementById('dd').textContent=money(d.dd);if(d.pf!=null)document.getElementById('pf').textContent=d.pf.toFixed(2);if(d.sharpe!=null)document.getElementById('sharpe').textContent=d.sharpe.toFixed(2);if(d.trades!=null)document.getElementById('trades').textContent=Math.round(d.trades).toLocaleString('pt-BR');if(d.equity.length){document.getElementById('initial').textContent=money(d.equity[0]);document.getElementById('final').textContent=money(d.equity.at(-1));drawCharts(d.equity)}setStatus('Arquivo analisado localmente.');});
+</script>
+</body>
+</html>
