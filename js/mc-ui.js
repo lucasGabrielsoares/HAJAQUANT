@@ -1,0 +1,6 @@
+import {runMonteCarlo} from './montecarlo.js';
+const el=id=>document.getElementById(id); const money=n=>Number.isFinite(n)?n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
+let lastTrades=[];
+export function setMonteCarloTrades(trades){lastTrades=trades||[]; const b=el('mcRun'); if(b)b.disabled=lastTrades.length<10; if(el('mcTrades'))el('mcTrades').textContent=lastTrades.length;}
+function set(id,v){if(el(id))el(id).textContent=v}
+export function initMonteCarlo(){const slider=el('mcSims'); const out=el('mcSimsValue'); if(slider){const sync=()=>{out.textContent=Number(slider.value).toLocaleString('pt-BR')};slider.oninput=sync;sync()} const run=()=>{try{const sims=Number(slider?.value||5000);const r=runMonteCarlo(lastTrades,sims);set('mcMedian',money(r.final.median));set('mcP5',money(r.final.p5));set('mcP95',money(r.final.p95));set('mcDDMedian',money(r.drawdown.median));set('mcDD95',money(r.drawdown.p95));set('mcLossProb',r.probabilityLoss.toFixed(2)+'%');set('mcStatus','Simulação concluída');set('mcRobustness',r.probabilityLoss<10?'Alta':r.probabilityLoss<30?'Moderada':'Baixa');}catch(e){set('mcStatus',e.message)}}; if(el('mcRun'))el('mcRun').onclick=run;}
